@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#123b32">
+<title>My Expense Manager</title>
+<style>
+:root{--bg:#f4f7f5;--card:#fff;--ink:#172b24;--muted:#6d7d74;--green:#176b4b;--line:#e3ebe6;--red:#c44747}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:#123b32;color:white;padding:22px 18px 25px;border-radius:0 0 24px 24px}
+header h1{margin:0;font-size:22px}header p{margin:5px 0 0;color:#c8ded3;font-size:13px}
+main{max-width:760px;margin:auto;padding:15px 14px 90px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:-5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 3px 12px #143b3210}
+.metric small{color:var(--muted);display:block}.metric strong{font-size:21px;display:block;margin-top:5px}
+.balance{grid-column:1/-1;background:#e2f2e8}.balance strong{font-size:25px}
+.tabs{display:flex;gap:8px;margin:16px 0}.tabs button{flex:1;border:1px solid var(--line);background:white;padding:11px;border-radius:12px;font-weight:600;color:var(--ink)}
+.tabs button.active{background:var(--green);color:white;border-color:var(--green)}
+h2{font-size:17px;margin:18px 0 10px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #d8e3dc;border-radius:11px;background:white;font:inherit;color:var(--ink)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.primary{width:100%;background:var(--green);color:white;border:0;border-radius:12px;padding:14px;font-weight:700;font-size:15px;margin-top:14px}
+.secondary{background:#edf4ef;color:var(--green);border:1px solid #d8e7dd;border-radius:10px;padding:10px;font-weight:600}
+.tx{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+.tx:last-child{border-bottom:0}.txname{font-weight:600}.txmeta{font-size:12px;color:var(--muted);margin-top:3px}.amount{font-weight:700;white-space:nowrap}.expense{color:var(--red)}.income{color:var(--green)}
+.actions{display:flex;gap:6px;margin-top:6px}.actions button{font-size:12px;padding:5px 8px}
+.hidden{display:none!important}.empty{text-align:center;color:var(--muted);padding:24px 8px}
+footer{position:fixed;bottom:0;left:0;right:0;background:#ffffffed;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:8px}
+footer button{max-width:240px;flex:1}
+@media(min-width:600px){main{padding-top:22px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}}
+</style></head>
+<body>
+<header><h1>My Expense Manager</h1><p>Personal + Business · Private offline tracking</p></header>
+<main>
+<section class="cards">
+ <div class="card metric"><small>Income</small><strong id="income">₹0</strong></div>
+ <div class="card metric"><small>Expenses</small><strong id="expenses">₹0</strong></div>
+ <div class="card metric balance"><small>Net balance (selected month)</small><strong id="balance">₹0</strong></div>
+</section>
+<div class="tabs"><button class="active" data-filter="all">All</button><button data-filter="personal">Personal</button><button data-filter="business">Business</button></div>
+<section class="card">
+<h2 id="formTitle">＋ Add transaction</h2>
+<form id="txform">
+<div class="formgrid">
+<div><label>Type</label><select id="type"><option value="expense">Expense</option><option value="income">Income</option></select></div>
+<div><label>For</label><select id="scope"><option value="personal">Personal</option><option value="business">Business</option></select></div>
+<div><label>Amount (₹)</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="e.g. 250" required></div>
+<div><label>Date</label><input id="date" type="date" required></div>
+<div><label>Category</label><select id="category"><option>Food</option><option>Travel / Petrol</option><option>Shopping</option><option>Bills</option><option>Medical</option><option>Rent</option><option>Salary</option><option>Sales / Business income</option><option>Office / Business expense</option><option>Other</option></select></div>
+<div><label>Payment method</label><select id="method"><option>UPI</option><option>Cash</option><option>Bank transfer</option><option>Debit card</option><option>Credit card</option><option>Other</option></select></div>
+</div>
+<label>Note (optional)</label><input id="note" placeholder="What was this for?">
+<button class="primary" id="saveBtn">Save transaction</button><button type="button" class="secondary hidden" id="cancelEdit" style="width:100%;margin-top:8px">Cancel edit</button>
+</form></section>
+<h2>Transactions <span id="count" style="color:var(--muted);font-weight:400"></span></h2>
+<div class="row"><div><label>Month</label><input id="month" type="month"></div><div><label>Search</label><input id="search" placeholder="Note or category"></div></div>
+<section class="card" style="margin-top:10px" id="list"></section>
+<section class="card" style="margin-top:14px"><h2>Backup & data</h2><p style="color:var(--muted);font-size:13px">Your entries stay in this browser on this device. Export a backup regularly; clearing browser data can erase them.</p><div class="row"><button class="secondary" id="export">Export backup</button><button class="secondary" id="importBtn">Restore backup</button></div><input type="file" id="importFile" accept=".json,application/json" class="hidden"><button class="secondary" id="csv" style="width:100%;margin-top:8px">Export transactions (CSV)</button><button class="secondary" id="clear" style="width:100%;margin-top:8px;color:#a22">Delete all data</button></section>
+</main>
+<footer><button class="secondary" onclick="document.querySelector('#amount').focus()">＋ New entry</button><button class="secondary" onclick="document.querySelector('#month').focus()">▦ Monthly report</button></footer>
+<script>
+const $=id=>document.getElementById(id), KEY='myExpenseManager_v1';
+let data=JSON.parse(localStorage.getItem(KEY)||'[]'),filter='all',editId=null;
+const today=new Date(), iso=d=>d.toISOString().slice(0,10);
+$('date').value=iso(today);$('month').value=iso(today).slice(0,7);
+const money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(n||0);
+const save=()=>localStorage.setItem(KEY,JSON.stringify(data));
+function visible(){let m=$('month').value,s=$('search').value.toLowerCase();return data.filter(x=>(filter==='all'||x.scope===filter)&&(!m||x.date.startsWith(m))&&(!s||(x.note+' '+x.category+' '+x.method).toLowerCase().includes(s))).sort((a,b)=>b.date.localeCompare(a.date)||b.created-b.created)}
+function render(){
+ let m=$('month').value;let monthly=data.filter(x=>!m||x.date.startsWith(m));
+ let inc=monthly.filter(x=>x.type==='income').reduce((a,x)=>a+x.amount,0),exp=monthly.filter(x=>x.type==='expense').reduce((a,x)=>a+x.amount,0);
+ $('income').textContent=money(inc);$('expenses').textContent=money(exp);$('balance').textContent=money(inc-exp);
+ let xs=visible();$('count').textContent='('+xs.length+')';
+ $('list').innerHTML=xs.length?xs.map(x=>`<div class="tx"><div style="min-width:0"><div class="txname">${esc(x.note||x.category)}</div><div class="txmeta">${x.date} · ${x.scope==='personal'?'Personal':'Business'} · ${esc(x.category)} · ${esc(x.method)}</div><div class="actions"><button class="secondary" onclick="editTx('${x.id}')">Edit</button><button class="secondary" onclick="deleteTx('${x.id}')">Delete</button></div></div><div class="amount ${x.type==='income'?'income':'expense'}">${x.type==='income'?'+':'−'}${money(x.amount)}</div></div>`).join(''):'<div class="empty">No transactions for this month yet.<br>Add your first entry above.</div>';
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('txform').addEventListener('submit',e=>{e.preventDefault();let amount=Number($('amount').value);if(!(amount>0))return alert('Enter an amount greater than zero.');
+let obj={id:editId||crypto.randomUUID(),created:Date.now(),type:$('type').value,scope:$('scope').value,amount,date:$('date').value,category:$('category').value,method:$('method').value,note:$('note').value.trim()};
+if(editId){let i=data.findIndex(x=>x.id===editId);if(i>=0)obj.created=data[i].created,data[i]=obj}else data.push(obj);save();resetForm();render()});
+function resetForm(){editId=null;$('txform').reset();$('date').value=iso(new Date());$('formTitle').textContent='＋ Add transaction';$('saveBtn').textContent='Save transaction';$('cancelEdit').classList.add('hidden')}
+window.editTx=id=>{let x=data.find(a=>a.id===id);if(!x)return;editId=id;for(let k of ['type','scope','amount','date','category','method','note'])$(k).value=x[k];$('formTitle').textContent='✎ Edit transaction';$('saveBtn').textContent='Update transaction';$('cancelEdit').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})};
+window.deleteTx=id=>{if(confirm('Delete this transaction?')){data=data.filter(x=>x.id!==id);save();render()}};
+$('cancelEdit').onclick=resetForm;
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('.tabs button').forEach(q=>q.classList.toggle('active',q===b));render()});
+$('month').onchange=render;$('search').oninput=render;
+$('export').onclick=()=>download('expense-backup.json',JSON.stringify(data,null,2),'application/json');
+$('csv').onclick=()=>{let rows=[['Date','Type','Scope','Amount INR','Category','Payment','Note'],...data.map(x=>[x.date,x.type,x.scope,x.amount,x.category,x.method,x.note])];download('expenses.csv',rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv')};
+$('importBtn').onclick=()=>$('importFile').click();
+$('importFile').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let j=JSON.parse(await f.text());if(!Array.isArray(j))throw 0;if(confirm('Restore backup? This replaces current transactions.')){data=j;save();render()}}catch{alert('Invalid backup file')}e.target.value=''};
+$('clear').onclick=()=>{if(confirm('Permanently delete ALL transactions from this device?')){data=[];save();render()}};
+function download(name,txt,type){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+render();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
+}
+</script>
+</body></html>
